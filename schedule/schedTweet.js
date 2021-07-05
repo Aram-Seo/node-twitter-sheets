@@ -24,20 +24,31 @@ async function work() {
 
         let mentionKey = await googleSystem.getDocsData('mention');
         let count = 0;
-        if (_.isEmpty(mentionKey)) {
-            count = 5;
+        if (_.isEmpty(mentionKey) || mentionKey == 0) {
+            count = 10;
+            mentionKey = 0;
         }
 
         for (let i = 0; i < oAuthTokenList.length; ++i) {
             let mentionList = await twitterSystem.getUserMentions(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret, mentionKey, count);
-            console.log(mentionList);
             for (let j = 0; j < mentionList.length; ++j) {
-                console.log(mentionList[j]);
+                // console.log(mentionList[j]);
                 if (j === 0) {
-                    googleSystem.updateDocsData('mention', mentionList[j].id);
+                    await googleSystem.updateDocsData('mention', mentionList[0].id_str);
+                }
+
+                let index = mentionList[j].text.indexOf('공격');
+                console.log(`${mentionList[j].id_str}, ${mentionList[j].id}, ${index}, ${ mentionList[j].text }`);
+                if (index !== NOT_FOUND_INDEX) {
+                    await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
+                        `@${mentionList[j].user.screen_name} ${mentionList[j].user.name}가 공격합니다 + ${moment().valueOf()}`, mentionList[j].id_str);
+                    util.sleep(1000);
+
                 }
             }
         }
+
+        // console.log(Number(mentionKey), typeof Number(mentionKey));
         return Promise.resolve();
     } catch (error) {
         console.error(`[] work Error : ${error}`);

@@ -50,6 +50,8 @@ function makeAuthorizationOAuth(method, queryParameters, url, accessToken, token
         oauth_version: "1.0"
     };
 
+    console.log(parameters);
+
     let oAuthSignature = oauthSignature.generate(method, url, parameters, config.TWITTER_API_SECRET_KEY, tokenSecret);
     console.log({ oAuthSignature });
 
@@ -78,7 +80,7 @@ async function getUserMentions(OAuthToken, OAuthTokenSecret, since_id, count = 0
 
     if (count === 0)
         delete params.count;
-    if (params.since_id === 0)
+    if (params.since_id == 0)
         delete params.since_id;
 
     console.log(params);
@@ -120,9 +122,11 @@ async function getUserMentions(OAuthToken, OAuthTokenSecret, since_id, count = 0
 async function updateMention(OAuthToken, OAuthTokenSecret, text, replyIdStr = '') {
     const url = `https://api.twitter.com/1.1/statuses/update.json`;
     let params = {
-        status: text,
+        status: text, // status에 () 괄호가 들어가는 순간 제대로 처리되지 않음. 주의 필요
         in_reply_to_status_id: replyIdStr,
     };
+
+    // console.log(params);
 
     let authorization = makeAuthorizationOAuth(METHOD_POST, params, url, OAuthToken, OAuthTokenSecret);
 
@@ -139,7 +143,8 @@ async function updateMention(OAuthToken, OAuthTokenSecret, text, replyIdStr = ''
         console.log(`${resp.statusCode} ${resp.statusMessage}:`);
         console.log(resp.body);
     } else {
-        console.log(resp.body);
+        // console.log(resp.body);
+        console.log('MENTION SUCCESS!');
     }
 
 } exports.updateMention = updateMention;
