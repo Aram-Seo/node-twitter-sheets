@@ -35,7 +35,7 @@ async function getDocsInfo() {
     }
 } exports.getDocsInfo = getDocsInfo;
 
-async function updateDocsData(module, updateKey) {
+async function updateDocsData(oAuthToken, module, updateKey) {
     try {
         await doc.loadInfo();
         const sheet = doc.sheetsByTitle['tweet-number'];
@@ -43,7 +43,7 @@ async function updateDocsData(module, updateKey) {
         let rows = await sheet.getRows();
 
         for (let i = 0; i < rows.length; ++i) {
-            if (rows[i].module === module) {
+            if (rows[i].token === oAuthToken && rows[i].module === module) {
                 rows[i].key = updateKey;
                 rows[i].save();
                 return Promise.resolve();
@@ -57,7 +57,7 @@ async function updateDocsData(module, updateKey) {
     }
 } exports.updateDocsData = updateDocsData;
 
-async function getDocsData(module) {
+async function getDocsData(oAuthToken, module) {
     try {
         await doc.loadInfo();
         const sheet = doc.sheetsByTitle['tweet-number'];
@@ -65,10 +65,13 @@ async function getDocsData(module) {
         let rows = await sheet.getRows();
 
         for (let i = 0; i < rows.length; ++i) {
-            if (rows[i].module === module) {
-                return Promise.resolve(rows[i].key);
+            if (rows[i].token === oAuthToken && rows[i].module === module) {
+                return Promise.resolve({ key: rows[i].key, id: rows[i].id });
             }
         }
+
+        // 여기까지 오면 맞는 토큰이 없다는 것임
+        await sheet.addRow({ token: oAuthToken, module: module, key: 0 });
 
         return Promise.resolve();
 
@@ -77,69 +80,3 @@ async function getDocsData(module) {
         return Promise.reject();
     }
 } exports.getDocsData = getDocsData;
-
-/*
- * 2.0.7버전
- * async function getDocsInfo() {
-    try {
-        doc.useServiceAccountAuth(creds, function (err) {
-            doc.getInfo(function (error, info) {
-                console.log(info);
-                console.log(`구글 시트의 제목  : ` + info.title);
-                console.log("구글 시트의 URL  : " + info.id);
-                console.log("마지막으로 업데이트된 날짜 및 시간  : " + info.updated);
-                console.log("스프레드시트의 생성자 아이디  : " + info.author.name);
-                console.log("스프레드시트의 생성자 메일주소  : " + info.author.email);
-            });
-        });
-    } catch (error) {
-        console.error(`[google_system] getDocsInfo Error: ${error}`);
-        return Promise.reject();
-    }
-} exports.getDocsInfo = getDocsInfo;
-
-async function updateDocsData(module, updateKey) {
-    try {
-        let rowsSetting = {
-            "offset": 1,
-            "limit" : 100
-        };
-        doc.useServiceAccountAuth(creds, function (err) {
-            doc.getRows(Enum.GOOGLE_SHEET_NUMBER.TWEET_NUMBER, rowsSetting, function (error, rows) {
-                for (let i = 0; i < rows.length; ++i) {
-                    if (rows[i].module === module) {
-                        rows[i].key = updateKey;
-                        rows[i].save();
-                    }
-                }
-            });
-        });
-    } catch (error) {
-        console.error(`[google_system] updateDocsData Error: ${error}`);
-        return Promise.reject();
-    }
-} exports.updateDocsData = updateDocsData;
-
-async function getDocsData(module) {
-    try {
-        let rowsSetting = {
-            "offset": 1,
-            "limit" : 100
-        };
-
-        let key = '';
-        await doc.useServiceAccountAuth(creds, function (err) {
-            doc.getRows(Enum.GOOGLE_SHEET_NUMBER.TWEET_NUMBER, rowsSetting, function (error, rows) {
-                for (let i = 0; i < rows.length; ++i) {
-                    if (rows[i].module === module) {
-                        key = rows[i].key;
-                    }
-                }
-            });
-        });
-        console.log(key);
-    } catch (error) {
-        console.error(`[google_system] getDocsData Error: ${error}`);
-        return Promise.reject();
-    }
-} exports.getDocsData = getDocsData;*/

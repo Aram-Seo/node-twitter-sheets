@@ -22,28 +22,56 @@ async function work() {
     try {
         if (_.isEmpty(oAuthTokenList)) return Promise.resolve();
 
-        let mentionKey = await googleSystem.getDocsData('mention');
-        let count = 0;
-        if (_.isEmpty(mentionKey) || mentionKey == 0) {
-            count = 10;
-            mentionKey = 0;
-        }
-
         for (let i = 0; i < oAuthTokenList.length; ++i) {
-            let mentionList = await twitterSystem.getUserMentions(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret, mentionKey, count);
+            let docsData = await googleSystem.getDocsData(oAuthTokenList[i].accessToken, 'mention');
+            let count = 0;
+            if (_.isEmpty(docsData.key) || docsData.key == 0) {
+                count = 10;
+                docsData.key = 0;
+            }
+
+            let mentionList = await twitterSystem.getUserMentions(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret, docsData.key, count);
             for (let j = 0; j < mentionList.length; ++j) {
-                // console.log(mentionList[j]);
+                console.log(mentionList[j]);
                 if (j === 0) {
-                    await googleSystem.updateDocsData('mention', mentionList[0].id_str);
+                    await googleSystem.updateDocsData(oAuthTokenList[i].accessToken, 'mention', mentionList[0].id_str);
                 }
 
-                let index = mentionList[j].text.indexOf('공격');
-                console.log(`${mentionList[j].id_str}, ${mentionList[j].id}, ${index}, ${ mentionList[j].text }`);
-                if (index !== NOT_FOUND_INDEX) {
-                    await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
-                        `@${mentionList[j].user.screen_name} ${mentionList[j].user.name}가 공격합니다 + ${moment().valueOf()}`, mentionList[j].id_str);
-                    util.sleep(1000);
-
+                for (let k = 0; k < Enum.ACTION_STRING.length; ++k) {
+                    if (mentionList[j].entities.user_mentions.length != 2) continue;
+                    let index = mentionList[j].text.indexOf(Enum.ACTION_STRING[k]);
+                    //console.log(`${mentionList[j].id_str}, ${mentionList[j].id}, ${index}, ${mentionList[j].text}`);
+                    if (index !== NOT_FOUND_INDEX) {
+                        console.log(mentionList[j].entities.user_mentions);
+                        let target = '';
+                        let userString = `@${mentionList[j].user.screen_name} `;
+                        for (const entity of mentionList[j].entities.user_mentions) {
+                            if (docsData.id !== entity.screen_name) {
+                                userString += `@${entity.screen_name} `;
+                                target += ` ${entity.name} `;
+                            }
+                        }
+                        switch (k) {
+                            case Enum.ACTION_DATA.ATTACK:
+                                console.log('ATTACK!!');
+                                await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
+                                    `${userString}${mentionList[j].user.name}이/가 ${target}을/를 공격합니다. + ${moment().valueOf()}`, mentionList[j].id_str);
+                                break;
+                            case Enum.ACTION_DATA.DEFENCE:
+                                await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
+                                    `${userString}${mentionList[j].user.name}이/가 ${target}의 공격을 방어합니다. + ${moment().valueOf()}`, mentionList[j].id_str);
+                                console.log('DEFENCE!!');
+                                break;
+                            case Enum.ACTION_DATA.AVOID:
+                                await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
+                                    `${userString}${mentionList[j].user.name}이/가 ${target}의 공격을 회피합니다. + ${moment().valueOf()}`, mentionList[j].id_str);
+                                console.log('AVOID!!');
+                                break;
+                        }
+                        /*await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
+                            `@${mentionList[j].user.screen_name} ${mentionList[j].user.name}가 공격합니다 + ${moment().valueOf()}`, mentionList[j].id_str);
+                        util.sleep(1000);*/
+                    }
                 }
             }
         }
