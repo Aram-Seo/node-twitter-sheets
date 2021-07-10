@@ -65,17 +65,17 @@ function makeAuthorizationOAuth(method, queryParameters, url, accessToken, token
 
 /**
  * 멘션 목록을 가져오는 함수
- * @name getUserMentions
+ * @name getUserMentionList
  * @param {string} OAuthToken
  * @param {string} OAuthTokenSecret
  * @param {string} since_id 멘션 리스트의 시작 값
  * @param {number} count 기본값으로 0을 가지고 있음
  */
-async function getUserMentions(OAuthToken, OAuthTokenSecret, since_id, count = 0) {
+async function getUserMentionList(OAuthToken, OAuthTokenSecret, since_id, count = 0) {
     const url = `https://api.twitter.com/1.1/statuses/mentions_timeline.json`;
     let params = {
         count: count,
-        since_id: Number(since_id),
+        since_id: since_id,
     };
 
     if (count === 0)
@@ -108,8 +108,37 @@ async function getUserMentions(OAuthToken, OAuthTokenSecret, since_id, count = 0
 
         return Promise.resolve(resp.body);
     }
+    return Promise.resolve([]);
 
-} exports.getUserMentions = getUserMentions;
+} exports.getUserMentionList = getUserMentionList;
+
+async function getUserMentionData(OAuthToken, OAuthTokenSecret, replyId) {
+    const url = `https://api.twitter.com/1.1/statuses/show.json`;
+    let params = {
+        id: replyId,
+    };
+
+    console.log(params);
+    let authorization = makeAuthorizationOAuth(METHOD_GET, params, url, OAuthToken, OAuthTokenSecret);
+
+    const options = {
+        headers: {
+            'authorization': authorization,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    };
+
+    const resp = await needle(METHOD_GET, url, params, options);
+
+    if (resp.statusCode != 200) {
+        console.log(`${resp.statusCode} ${resp.statusMessage}:`);
+        console.log(resp.body);
+    } else {
+        return Promise.resolve(resp.body);
+    }
+    return Promise.resolve(null);
+
+} exports.getUserMentionData = getUserMentionData;
 
 /**
  * 트윗 & 멘션 하기

@@ -30,7 +30,7 @@ async function work() {
                 docsData.key = 0;
             }
 
-            let mentionList = await twitterSystem.getUserMentions(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret, docsData.key, count);
+            let mentionList = await twitterSystem.getUserMentionList(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret, docsData.key, count);
             for (let j = 0; j < mentionList.length; ++j) {
                 console.log(mentionList[j]);
                 if (j === 0) {
@@ -40,9 +40,9 @@ async function work() {
                 for (let k = 0; k < Enum.ACTION_STRING.length; ++k) {
                     if (mentionList[j].entities.user_mentions.length != 2) continue;
                     let index = mentionList[j].text.indexOf(Enum.ACTION_STRING[k]);
-                    //console.log(`${mentionList[j].id_str}, ${mentionList[j].id}, ${index}, ${mentionList[j].text}`);
+                    // console.log(`${mentionList[j].id_str}, ${mentionList[j].id}, ${index}, ${mentionList[j].text}`);
                     if (index !== NOT_FOUND_INDEX) {
-                        console.log(mentionList[j].entities.user_mentions);
+                        // console.log(mentionList[j].entities.user_mentions);
                         let target = '';
                         let userString = `@${mentionList[j].user.screen_name} `;
                         for (const entity of mentionList[j].entities.user_mentions) {
@@ -51,26 +51,38 @@ async function work() {
                                 target += ` ${entity.name} `;
                             }
                         }
+
+                        /** TODO : 여기에 원래 docs에서 데이터 긁어와서(user id에 따라 스탯을 저장하는 걸로) 수치 계산하는게 맞지 않나 싶음
+                         * 물론 스탯을 작업하기 전에 여러모로 보완해야 할 지점 필요함
+                         */
+                        let replyData = '';
+                        if (mentionList[j].in_reply_to_status_id_str !== null && k !== Enum.ACTION_DATA.END)
+                            replyData = await twitterSystem.getUserMentionData(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret, mentionList[j].in_reply_to_status_id_str);
+                        if (_.isEmpty(replyData)) continue;
+
                         switch (k) {
-                            case Enum.ACTION_DATA.ATTACK:
-                                console.log('ATTACK!!');
-                                await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
-                                    `${userString}${mentionList[j].user.name}이/가 ${target}을/를 공격합니다. + ${moment().valueOf()}`, mentionList[j].id_str);
-                                break;
+                            case Enum.ACTION_DATA.END:
+                                {
+                                    await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
+                                        `${userString}${mentionList[j].user.name}와/과 ${target}의 전투가 종료됩니다. 수고하셨습니다.`, mentionList[j].id_str);
+                                    console.log('END...');
+                                    break;
+                                }
                             case Enum.ACTION_DATA.DEFENCE:
-                                await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
-                                    `${userString}${mentionList[j].user.name}이/가 ${target}의 공격을 방어합니다. + ${moment().valueOf()}`, mentionList[j].id_str);
-                                console.log('DEFENCE!!');
-                                break;
+                                {
+                                    await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
+                                        `${userString} ${replyData.user.name}이/가 공격 했지만 ${mentionList[j].user.name}이/가 방어합니다. `, mentionList[j].id_str);
+                                    console.log('DEFENCE!!');
+                                    break;
+                                }
                             case Enum.ACTION_DATA.AVOID:
-                                await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
-                                    `${userString}${mentionList[j].user.name}이/가 ${target}의 공격을 회피합니다. + ${moment().valueOf()}`, mentionList[j].id_str);
-                                console.log('AVOID!!');
-                                break;
+                                {
+                                    await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
+                                        `${userString} ${replyData.user.name}이/가 공격 했지만 ${mentionList[j].user.name}이/가 회피합니다. `, mentionList[j].id_str);
+                                    console.log('AVOID!!');
+                                    break;
+                                }
                         }
-                        /*await twitterSystem.updateMention(oAuthTokenList[i].accessToken, oAuthTokenList[i].accessSecret,
-                            `@${mentionList[j].user.screen_name} ${mentionList[j].user.name}가 공격합니다 + ${moment().valueOf()}`, mentionList[j].id_str);
-                        util.sleep(1000);*/
                     }
                 }
             }
